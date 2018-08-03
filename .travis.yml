@@ -44,6 +44,18 @@ matrix:
     - os: linux
       compiler: clang
       env: FEATURES="--enable-memcached"
+    - os: linux
+      compiler: clang
+      env: CFLAGS="-fsanitize=undefined" ASAN_OPTIONS="detect_leaks=0"
+    - os: linux
+      compiler: clang
+      env: CFLAGS="-fsanitize=address -g" ASAN_OPTIONS="detect_leaks=0"
+    - os: linux
+      compiler: clang
+      env: PATH="/usr/bin:$PATH" TEST=analyze
+    # - os: linux
+    #   compiler: gcc
+    #   env: CUDA=8.0.61-1
     - os: osx
       osx_image: xcode8.3
       compiler: clang
@@ -69,16 +81,18 @@ script:
   - make package
 
 before_deploy:
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then export FILE_TO_UPLOAD="$(ls $TRAVIS_BUILD_DIR/bundle/*dmg)"; fi
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then FILE_TO_UPLOAD="$TRAVIS_BUILD_DIR/ccache" && ls $FILE_TO_UPLOAD; fi 
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then export FILE_TO_UPLOAD="$(ls bundle/*dmg)" && CCACHE_VERSION=$TRAVIS_TAG; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then sed -i '' "s|FILE_TO_DEPLOY|$FILE_TO_UPLOAD|g; s/CCACHE_VERSION/$CCACHE_VERSION/g" descriptor.json; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then FILE_TO_UPLOAD="$TRAVIS_BUILD_DIR/ccache" && CCACHE_VERSION=$TRAVIS_TAG; fi 
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then sed -i "s|FILE_TO_DEPLOY|$FILE_TO_UPLOAD|g; s/CCACHE_VERSION/$CCACHE_VERSION/g" descriptor.json; fi
   
 deploy:
-  provider: releases
-  api_key:
-    secure: G4rIpoLDYsjZhHOptB8pIVvkIinEUAxQpb2EFAwVQHk2tlfVCy0gdDIOdtK22cVAZ/Qj3p8BNeoIOQSHVlkHB9XOH1EGjZK7H/WvOnkjgDigOeoj9vHzg9KvBk8CQB2QSyIkdPy5xg6KfuvgMZW9n/5G/k5Gphl5N5QlDFBTxK6yk9ufBh1RS+wf0czdagUqkAyuMtrBfKx15mKuSFp/TAm+Q9OsCB4gvjHNQnTWCIt87OmtHFKzWpNek4F+UA6zjKd2Veq7yp8KTuAT8qAfOkEMgZjW90Mq/MWgHZ/ZQrez5G40M7sTZz1nNrkeFB40LypQ9wgIUjqrxDQDg2Ns9nDSVhUM4SsNb1uWDWjxiNn6uG/gwXEHt7IttKnzp/pFSON+oXdPdLv3MwPI6z/LWN3v8ncDmVaHysMNKwUGiH7RGefrzd+FhOL3xTxWFnOgZKpBPdMWldHUNPQerh0Fqr/6a5RF8ffhIU3cR672manTlOCW/SLaU+2MvVkB5QxOTlvHCe5v6GUMivTlywDojZW6GelyS+kdZLhL7rsh8kAqxr+3r13Y8rFpsbkz7+VnDaqOSwUkMlMGGrAlbgr8ipFOv74pj8SjpA3d+rlHU5xnA2zU1Eb2uuaGMtSzIdpVlG6akQoRpoqLPM5P4doyOXfm9it3HuKZJabOlulJVOo=
-  file: $FILE_TO_UPLOAD
+  provider: bintray
+  file: "descriptor.json"
+  user: "wotd"
   skip_cleanup: true
-  overwrite: true
+  key:
+    secure: i91gsv0PaqePxUDnDlhWWMy9RyUWT++6Is4PwcS6bICPugvrvoGnzCCyLU2ZFwfr5TxwQSVVD8pS8V48ngeMSGMlwWRhwjWYd+nI7rZ18KsOlJb0DXeF09lBQ0uffz6OA8Pebfxllob43NzWdeqMYqskkOlyIPOxjczuZJNdQYAYnUST4YCS4di6c5iBheHSDi+DYgZ6G6ULIQOoGvN18MFRZplfqx4tAXRCaU8or1ASABlDk7Jru4+nZ02z1NImIUJ5mHPxH8kkYoBpoSU3MAMGg6XasT/8SupnTdPQYpNRuBDHzBfgZ2xZk2XsmXWmc/axGAZJje0udfleCU+8TKMUHnmupJg4t/fB7G9fWcSBO7lprMhA3e3rSsbC6mChHzL0oeytZtfGXWZiVbXvX/M7mxt4mESZwNxZCebwUda7ql7n0FYHUgVtiokJm+ywOaz38YBe9kOSHwTpeuZD9qsvHDaD2Xq5q07cP88IMBXTcjzJ2Jfo+THqE+8Zq1Of8HZ3v54P2DFrEeUSLlSnnsIz3Hr6BM7sa3wT9XOmizi+7MpI1adBlaXifhHHnZ4rpfsWypZonVtgL+rOU1kg7UAeDkWZpFG1s9z35NcH4IRrMAVjp6BcF3ovDXh8BEztXjNLKsLtAUicJlvA2Zp/ylXD7mXHDtNr1FRnOudnO7w=
   on:
     branch: feature/macosdistribution
     tags: true
