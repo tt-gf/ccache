@@ -4,7 +4,7 @@
         "name": "ccache", 
         "repo": "v", 
         "subject": "wotd",
-        "vcs_url": "https://github.com/wotd/ccache.git",
+        "vcs_url": "https://github.com/tt-gf/ccache.git",
         "licenses": ["MIT"],
         "desc": "I was pushed completely automatically",
         "labels": ["ccache", "memcached"]
