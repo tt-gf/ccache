@@ -1,101 +1,87 @@
 language: c
-
 cache: ccache
-
 sudo: required
-
 addons:
-    apt:
-        packages:
-            - asciidoc
-            - libxslt1-dev
-            - xsltproc
-            - docbook-xml
-            - docbook-xsl
-            - gperf
-            - elfutils
-            - zlib1g-dev
-            - libmemcached-dev
-            - libmemcached-tools
-            - memcached
-            - mingw32
-            - mingw32-binutils
-            - clang    # scan-build
-
-os:
-    - linux
-    - osx
-
-compiler:
+  apt:
+    packages:
+    - asciidoc
+    - libxslt1-dev
+    - xsltproc
+    - docbook-xml
+    - docbook-xsl
+    - gperf
+    - elfutils
+    - zlib1g-dev
+    - libmemcached-dev
+    - libmemcached-tools
+    - memcached
+    - mingw32
+    - mingw32-binutils
     - clang
-    - gcc
-
+os:
+- linux
+- osx
+compiler:
+- clang
+- gcc
 env:
   global:
-    - XML_CATALOG_FILES=/usr/local/etc/xml/catalog
-
+  - XML_CATALOG_FILES=/usr/local/etc/xml/catalog
 matrix:
-    include:
-        - os: linux
-          compiler: gcc
-          sudo: required
-          dist: trusty
-          env: FEATURES="--enable-memcached"
-        - os: linux
-          compiler: clang
-          env: FEATURES="--enable-memcached"
-#        - os: linux
-#          compiler: i586-mingw32msvc-gcc
-#          env: HOST="--host=i586-mingw32msvc" TEST="test/main.exe"
-        - os: linux
-          compiler: clang
-          env: CFLAGS="-fsanitize=undefined" ASAN_OPTIONS="detect_leaks=0"
-        - os: linux
-          compiler: clang
-          env: CFLAGS="-fsanitize=address -g" ASAN_OPTIONS="detect_leaks=0"
-        - os: linux
-          compiler: clang
-          env: PATH="/usr/bin:$PATH" TEST=analyze
-        - os: linux
-          compiler: gcc
-          env: CUDA=8.0.61-1
-        - os: osx
-          osx_image: xcode8.3
-          compiler: clang
-          env: FEATURES=" --enable-memcached --with-bundled-zlib"
-        - os: osx
-          osx_image: xcode9
-          compiler: clang
-          env: FEATURES="--enable-memcached --with-bundled-zlib"
-
-    exclude:
-        - os: osx
-          compiler: gcc
-
+  include:
+  - os: linux
+    compiler: gcc
+    sudo: required
+    dist: trusty
+    env: FEATURES="--enable-memcached"
+  - os: linux
+    compiler: clang
+    env: FEATURES="--enable-memcached"
+  - os: linux
+    compiler: clang
+    env: CFLAGS="-fsanitize=undefined" ASAN_OPTIONS="detect_leaks=0"
+  - os: linux
+    compiler: clang
+    env: CFLAGS="-fsanitize=address -g" ASAN_OPTIONS="detect_leaks=0"
+  - os: linux
+    compiler: clang
+    env: PATH="/usr/bin:$PATH" TEST=analyze
+  - os: osx
+    osx_image: xcode8.3
+    compiler: clang
+    env: FEATURES=" --enable-memcached --with-bundled-zlib"
+  - os: osx
+    osx_image: xcode9
+    compiler: clang
+    env: FEATURES="--enable-memcached --with-bundled-zlib"
+  exclude:
+  - os: osx
+    compiler: gcc
 before_install:
-    - source ./.travis/install_cuda.sh
-    # OSX dependencies
-    - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update; fi
-    - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install asciidoc libmemcached; fi
-
-
+- if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update; fi
+- if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew install asciidoc libmemcached; fi
 script:
-    - ./autogen.sh
-    - ./configure --prefix $(pwd)/build $HOST $FEATURES
-    - make
-    - make ${TEST:-test}
-    - make package
-
-
+- "./autogen.sh"
+- "./configure --prefix $(pwd)/build $HOST $FEATURES"
+- make
+- make ${TEST:-test}
+- make package
 before_deploy:
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; export FILE_TO_UPLOAD="$(pwd)/bundle/ccache.dmg"; fi
-
+- if [ "$TRAVIS_OS_NAME" = "osx" ]; then export FILE_TO_UPLOAD="$(ls bundle/*dmg)"
+  && CCACHE_VERSION=$TRAVIS_TAG; fi
+- if [ "$TRAVIS_OS_NAME" = "osx" ]; then sed -i '' "s|FILE_TO_DEPLOY|$FILE_TO_UPLOAD|g;
+  s/CCACHE_VERSION/$CCACHE_VERSION/g" descriptor.json; fi
+- if [ "$TRAVIS_OS_NAME" = "linux" ]; then FILE_TO_UPLOAD="$TRAVIS_BUILD_DIR/ccache"
+  && CCACHE_VERSION=$TRAVIS_TAG; fi
+- if [ "$TRAVIS_OS_NAME" = "linux" ]; then sed -i "s|FILE_TO_DEPLOY|$FILE_TO_UPLOAD|g;
+  s/CCACHE_VERSION/$CCACHE_VERSION/g" descriptor.json; fi
 deploy:
-  provider: releases
-  api_key:
-    - secure: G4rIpoLDYsjZhHOptB8pIVvkIinEUAxQpb2EFAwVQHk2tlfVCy0gdDIOdtK22cVAZ/Qj3p8BNeoIOQSHVlkHB9XOH1EGjZK7H/WvOnkjgDigOeoj9vHzg9KvBk8CQB2QSyIkdPy5xg6KfuvgMZW9n/5G/k5Gphl5N5QlDFBTxK6yk9ufBh1RS+wf0czdagUqkAyuMtrBfKx15mKuSFp/TAm+Q9OsCB4gvjHNQnTWCIt87OmtHFKzWpNek4F+UA6zjKd2Veq7yp8KTuAT8qAfOkEMgZjW90Mq/MWgHZ/ZQrez5G40M7sTZz1nNrkeFB40LypQ9wgIUjqrxDQDg2Ns9nDSVhUM4SsNb1uWDWjxiNn6uG/gwXEHt7IttKnzp/pFSON+oXdPdLv3MwPI6z/LWN3v8ncDmVaHysMNKwUGiH7RGefrzd+FhOL3xTxWFnOgZKpBPdMWldHUNPQerh0Fqr/6a5RF8ffhIU3cR672manTlOCW/SLaU+2MvVkB5QxOTlvHCe5v6GUMivTlywDojZW6GelyS+kdZLhL7rsh8kAqxr+3r13Y8rFpsbkz7+VnDaqOSwUkMlMGGrAlbgr8ipFOv74pj8SjpA3d+rlHU5xnA2zU1Eb2uuaGMtSzIdpVlG6akQoRpoqLPM5P4doyOXfm9it3HuKZJabOlulJVOo=
-  file: "${FILE_TO_UPLOAD}"
+  provider: bintray
+  file: descriptor.json
+  user: wotd
   skip_cleanup: true
-  overwrite: true
+  key:
+    secure: b0L3IYXmpwhIy4s+LcL2yQjI2fZgo2WiXjy/GOTIjvDCI3f39aqI9PdMGYG9nyDC7r4cKUq6l2gmwolqvd+vuqHHAdHyaWjQ5mTVEa5BCi5zDWTGIDu/2o+nJtcyjz0Us+kDPX+KjcbXfhr8pmp7g2cyg6BQcCYvXahZbrP+V9eGmOEhYdlph0LHzHBhMdsYfSvijjsjT35jTA6Tp4P1SZyjpkBkGrkA4K9n6BfL3qCMTYIFG3fRYe+j0wFBzpzFnFuFDNNFd1EJEXxgLVAvh+jtWv7NYNNZklVwU2/Mz3cl18lf6CtAa0fgbqsfDEiugm0i5jG8yRiNZhtONiRcnZaDCd7wrdgeFYLHxGmFxXjw8DtX13xXRvr2Rs+V++8mcdkb+w6t2ixUSoAomq6+uHpYoRRThh5Na+vQkBsXfWVEPD0YITWHu5lRtk8tmT86tK/zlPrOk3asOuRGpczmT10sOEVbQFpq2K8fzWrMVfyP5YKW7VY+XGTsarquhSLpk5S5UZINPHjMmU3xDQA6FwK43x3GtMdppt9QtyFvhEOyQSkh1DoXLXAqf1GpQQXnUrt4naCZT9q8nwm7jTBM9c6Q0A2zmJtcmdZNcbUY4dZ7Z2v10rocbO2fZ+BBfQ8ZPWrU0osACK6LbgXPIm++Hi0q5y0+YCkgv3ow0iRW8p8=
   on:
+    branch: feature/macosdistribution
     tags: true
