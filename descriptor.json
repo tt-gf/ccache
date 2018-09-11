@@ -2,8 +2,8 @@
 
     "package": {
         "name": "ccache", 
-        "repo": "v", 
-        "subject": "wotd",
+        "repo": "ccache", 
+        "subject": "tt-gf",
         "vcs_url": "https://github.com/tt-gf/ccache.git",
         "licenses": ["MIT"],
         "desc": "I was pushed completely automatically",
